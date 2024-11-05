@@ -12,6 +12,10 @@ import board
 import microcontroller
 import displayio
 import terminalio
+
+# VAUGHNS CHANGES!!!!!!!!!
+import pwmio
+
 from adafruit_display_text import label
 import adafruit_displayio_ssd1306
 import adafruit_imageload
@@ -24,6 +28,20 @@ from adafruit_ds18x20 import DS18X20
 led = DigitalInOut(board.LED)
 led.direction = Direction.OUTPUT
 led.value = False
+
+# Set up PWM on GPIO 15 VAUGHNS CHANGES!!!!!!!!!
+Fan_PWM = pwmio.PWMOut(board.GP0, frequency=2500, duty_cycle=0)
+
+# Function to set fan speed (0 to 100%) VAUGHNS CHANGES!!!!!!!!
+def set_fan_speed(speed):
+    if 0 <= speed <= 100:
+        duty_cycle = int((speed / 100) * 65535)
+        Fan_PWM.duty_cycle = duty_cycle
+        return speed
+    else:
+        print("Speed must be between 0 and 100")
+
+
 
 #  connect to network
 print()
@@ -99,10 +117,17 @@ def buttonpress(request: Request):
     if "ON" in raw_text:
         #  turn on the onboard LED
         led.value = True
+
+        # Vaughns changes 
+        set_fan_speed(100)
+
     #  if the led off button was pressed
     if "OFF" in raw_text:
         #  turn the onboard LED off
         led.value = False
+
+        # Vaughns changes
+        set_fan_speed(0)
     
     #  reload site
     return Response(request, f"{webpage()}", content_type='text/html')
