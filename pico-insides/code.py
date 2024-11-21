@@ -93,9 +93,9 @@ def webpage():
     <p class="dotted">This is a Pico W running an HTTP server with CircuitPython.</p>
     <h1>Control the LED on the Pico W with these buttons:</h1>
     <form accept-charset="utf-8" method="POST">
-    <button class="button" name="LED ON" value="ON" type="submit">LED ON</button></a></p></form>
+    <button class="button" name="FAN ON" value="ON" type="submit">LED ON</button></a></p></form>
     <p><form accept-charset="utf-8" method="POST">
-    <button class="button" name="LED OFF" value="OFF" type="submit">LED OFF</button></a></p></form>
+    <button class="button" name="FAN OFF" value="OFF" type="submit">LED OFF</button></a></p></form>
     </body></html>
     """
     return html
