@@ -43,23 +43,26 @@ def set_fan_speed(speed):
 
 
 
-#  connect to network
-print()
+# WiFi setup
 print("Connecting to WiFi")
-connect_text = "Connecting..."
-
-
-#  set static IP address
-ipv4 =  ipaddress.IPv4Address("192.168.1.42")
-netmask =  ipaddress.IPv4Address("255.255.255.0")
-gateway =  ipaddress.IPv4Address("192.168.1.1")
-wifi.radio.set_ipv4_address(ipv4=ipv4,netmask=netmask,gateway=gateway)
-#  connect to your SSID
+ipv4 = ipaddress.IPv4Address("192.168.1.42")
+netmask = ipaddress.IPv4Address("255.255.255.0")
+gateway = ipaddress.IPv4Address("192.168.1.1")
+wifi.radio.set_ipv4_address(ipv4=ipv4, netmask=netmask, gateway=gateway)
 wifi.radio.connect(os.getenv('CIRCUITPY_WIFI_SSID'), os.getenv('CIRCUITPY_WIFI_PASSWORD'))
-
 print("Connected to WiFi")
+
+# Socket pool for networking
 pool = socketpool.SocketPool(wifi.radio)
+
+# HTTP server for port 5000
 server = Server(pool, "/static", debug=True)
+
+# Data server for temperature communication on port 5001
+data_server = pool.socket(socketpool.AF_INET, socketpool.SOCK_STREAM)
+data_server.bind(("0.0.0.0", 5001))
+data_server.listen(1)
+data_server.settimeout(0.5)  # Non-blocking mode
 #  font for HTML
 font_family = "monospace"
 #  the HTML script
@@ -148,16 +151,22 @@ clock = time.monotonic() #  time.monotonic() holder for server ping
 
 while True:
     try:
-        #  every 30 seconds, ping server & update temp reading
-        if (clock + 30) < time.monotonic():
-            if wifi.radio.ping(ping_address) is None:
-                print("lost connection")
-            else:
-                print("connected")
-            clock = time.monotonic()
-        #  poll the server for incoming/outgoing requests
+        # Poll HTTP server
         server.poll()
-    # pylint: disable=broad-except
     except Exception as e:
-        print(e)
-        continue
+        print("HTTP server error:", e)
+    
+    try:
+        # Accept temperature data connection
+        conn, addr = data_server.accept()
+        print(f"Connection from {addr}")
+
+        # Receive temperature data
+        data = conn.recv(1024).decode("utf-8").strip()
+        print(f"Received temperature data: {data}")
+        conn.sendall(b"Temperature data received.\n")
+        conn.close()
+    except OSError:  # No connection available, continue
+        pass
+    except Exception as e:
+        print("Temperature server error:", e)
