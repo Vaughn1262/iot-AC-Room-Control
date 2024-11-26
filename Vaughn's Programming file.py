@@ -4,6 +4,9 @@ import time
 
 # Set up PWM on GPIO 15
 Fan_PWM = pwmio.PWMOut(board.GP10, frequency=2500, duty_cycle=0)
+temp = 69
+set_temp = 70
+setting = "heating on"
 
 # Function to set fan speed (0 to 100%)
 def set_fan_speed(speed):
@@ -16,9 +19,38 @@ def set_fan_speed(speed):
 
 # Example usage
 while True:
-    set_fan_speed(100)  # 100% speed
-    time.sleep(5)
-    set_fan_speed(50)   # 50% speed
-    time.sleep(5)
-    set_fan_speed(0)    # 0% speed (off)
-    time.sleep(5)
+    if temp < set_temp -5 and setting == "heating on":
+        set_fan_speed(100)  
+        time.sleep(5)
+        temp = 71
+        setting = "cooling on"
+    elif temp <= set_temp -3 and setting == "heating on":
+        set_fan_speed(50)  
+        time.sleep(5)
+        temp = 71
+        setting = "cooling on"
+    elif temp <= set_temp -1 and setting == "heating on":
+        set_fan_speed(25)  
+        time.sleep(5)
+        temp = 71
+        setting = "cooling on"
+    elif temp > set_temp + 5 and setting == "cooling on":
+        set_fan_speed(100)   
+        time.sleep(5)
+        setting = "on"
+    elif temp >= set_temp + 3 and setting == "cooling on":
+        set_fan_speed(50)   
+        time.sleep(5)
+        setting = "on"
+    elif temp >= set_temp + 1and setting == "cooling on":
+        set_fan_speed(25)   
+        time.sleep(5)
+        setting = "on"
+    elif setting == "on":
+        set_fan_speed(100)    # 0% speed (off)
+        time.sleep(5)
+        setting = "off"
+    elif setting == "off":
+        set_fan_speed(0)
+        time.sleep(5)
+        
