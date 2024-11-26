@@ -45,18 +45,17 @@ def set_fan_speed(speed):
 
 # WiFi setup
 print("Connecting to WiFi")
-ipv4 = ipaddress.IPv4Address("192.168.1.42")
-netmask = ipaddress.IPv4Address("255.255.255.0")
-gateway = ipaddress.IPv4Address("192.168.1.1")
-wifi.radio.set_ipv4_address(ipv4=ipv4, netmask=netmask, gateway=gateway)
 wifi.radio.connect(os.getenv('CIRCUITPY_WIFI_SSID'), os.getenv('CIRCUITPY_WIFI_PASSWORD'))
 print("Connected to WiFi")
 
-# Socket pool for networking
+# Socket pool and server setup
 pool = socketpool.SocketPool(wifi.radio)
+http_port = 5000
+temp_data_port = 5001
+http_server = Server(pool, "/static", port=http_port, debug=True)
 
-# HTTP server for port 5000
-server = Server(pool, "/static", debug=True)
+# Storage for received temperature data
+latest_temperature_data = "No data received yet."
 
 # Data server for temperature communication on port 5001
 data_server = pool.socket(socketpool.AF_INET, socketpool.SOCK_STREAM)
@@ -149,6 +148,13 @@ ping_address = ipaddress.ip_address("8.8.4.4")
 
 clock = time.monotonic() #  time.monotonic() holder for server ping
 
+# Socket for temperature data
+temp_data_socket = pool.socket()
+temp_data_socket.bind((str(wifi.radio.ipv4_address), temp_data_port))
+temp_data_socket.listen(1)  # Allow one connection at a time
+
+print(f"Listening for temperature data on port {temp_data_port}")
+
 while True:
     try:
         # Poll HTTP server
@@ -157,15 +163,18 @@ while True:
         print("HTTP server error:", e)
     
     try:
-        # Accept temperature data connection
-        conn, addr = data_server.accept()
-        print(f"Connection from {addr}")
+        # Check for temperature data
+        temp_client, _ = temp_data_socket.accept()
+        data = temp_client.recv(1024).decode("utf-8").strip()
+        if data:
+            print("Received temperature data:", data)
+            latest_temperature_data = data
 
-        # Receive temperature data
-        data = conn.recv(1024).decode("utf-8").strip()
-        print(f"Received temperature data: {data}")
-        conn.sendall(b"Temperature data received.\n")
-        conn.close()
+            # Acknowledge receipt
+            temp_client.send(b"Temperature data received successfully.")
+        temp_client.close()
+        # Poll HTTP server for requests
+        http_server.poll()
     except OSError:  # No connection available, continue
         pass
     except Exception as e:

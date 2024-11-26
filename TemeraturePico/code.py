@@ -30,13 +30,14 @@ def send_temperature():
         print(f"Sending data to {server_ip}:{server_port} -> {message}")
         
         # Connect to the server
-        with pool.socket(socketpool.AF_INET, socketpool.SOCK_STREAM) as sock:
-            sock.connect((server_ip, server_port))
-            sock.sendall(message.encode("utf-8"))
-            
-            # Receive acknowledgment
-            response = sock.recv(1024).decode("utf-8").strip()
-            print("Server response:", response)
+        sock = pool.socket()  # No AF_INET or SOCK_STREAM needed
+        sock.connect((server_ip, server_port))
+        sock.send(message.encode("utf-8"))
+        
+        # Receive acknowledgment
+        response = sock.recv(1024).decode("utf-8").strip()
+        print("Server response:", response)
+        sock.close()
     except Exception as e:
         print("Error sending temperature data:", e)
 
@@ -44,3 +45,4 @@ def send_temperature():
 while True:
     send_temperature()
     time.sleep(10)  # Send temperature data every 10 seconds
+
