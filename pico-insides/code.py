@@ -63,7 +63,13 @@ font_family = "monospace"
 #  this way, can insert string variables from code.py directly
 #  of note, use {{ and }} if something from html *actually* needs to be in brackets
 #  i.e. CSS style formatting
-goal_temperature = 23
+goal_temperature = 23.1
+  # Ensure the global goal_temperature is updated
+measured_temperature = 23.1
+cooling_mode = False
+heating_mode = False
+on_mode = False
+off_mode = False
 
 def webpage():
     html = f"""
@@ -123,8 +129,12 @@ def base(request: Request):  # pylint: disable=unused-argument
 #  if a button is pressed on the site
 @server.route("/", POST)
 def buttonpress(request: Request):
-    global goal_temperature  # Ensure the global goal_temperature is updated
+    global cooling_mode
+    global heating_mode
     global measured_temperature
+    global goal_temperature
+    global on_mode
+    global off_mode
     # Get the raw text
     raw_text = request.raw_request.decode("utf8")
     print(raw_text)
@@ -132,33 +142,48 @@ def buttonpress(request: Request):
     # If the LED ON button was pressed
     if "ON" in raw_text:
         # Turn on the onboard LED
-        led.value = True
-        set_fan_speed(100)  # Set fan speed to 100%
+        led.value = True  # Set fan speed to 100%
+        heating_mode = False
+        cooling_mode = False
+        on_mode = True
+        off_mode = False
 
     # If the LED OFF button was pressed
     if "OFF" in raw_text:
         # Turn the onboard LED off
         led.value = False
         set_fan_speed(0)  # Set fan speed to 0%
+        heating_mode = False
+        cooling_mode = False
+        on_mode = False
+        off_mode = True
 
     # Set Heating Mode
     if "HEATING" in raw_text:
-        heating_mode = True
-        cooling_mode = False
         print("Heating Mode activated")
-
+        cooling_mode =False
+        heating_mode =True
+        on_mode = False
+        off_mode = False
+        print(cooling_mode)
+        print(heating_mode)
     # Set Cooling Mode
     if "COOLING" in raw_text:
-        cooling_mode = True
-        heating_mode = False
         print("Cooling Mode activated")
+        cooling_mode =True
+        heating_mode =False
+        on_mode = False
+        off_mode = False
+        print(cooling_mode)
+        print(heating_mode)
+        
 
     # Set Goal Temperature (parse the temperature from the form)
     if "goal_temperature" in raw_text:
         goal_temperature_str = raw_text.split('goal_temperature=')[1].split('&')[0]
         try:
             goal_temperature = float(goal_temperature_str)
-            print(f"Goal Temperature set to {goal_temperature}°C")
+            print(f"Goal Temperature set to {goal_temperature}°F")
         except ValueError:
             print("Invalid temperature value submitted.")
 
@@ -168,6 +193,8 @@ def buttonpress(request: Request):
         try:
             measured_temperature = float(meas_temperature_str)
             print(f"Measured Temperature received: {measured_temperature}°C")
+            measured_temperature = measured_temperature * (9/5) + 32
+            print(measured_temperature)
             # Optionally, you can use measured_temperature for logging, feedback, or control logic
         except ValueError:
             print("Invalid measured temperature value received.")
@@ -205,4 +232,15 @@ while True:
     except Exception as e:
         print(e)
         continue
-
+    if heating_mode == True:
+        if measured_temperature > goal_temperature:
+            set_fan_speed(50)
+    elif cooling_mode == True:
+        if measured_temperature < goal_temperature:
+            set_fan_speed(50)
+    elif on_mode == True:
+        set_fan_speed(100)
+    elif off_mode == True:
+        set_fan_speed(0)
+    else:
+        set_fan_speed(0)
