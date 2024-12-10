@@ -63,9 +63,9 @@ font_family = "monospace"
 #  this way, can insert string variables from code.py directly
 #  of note, use {{ and }} if something from html *actually* needs to be in brackets
 #  i.e. CSS style formatting
-goal_temperature = 23.1
+goal_temperature = 72.1
   # Ensure the global goal_temperature is updated
-measured_temperature = 23.1
+measured_temperature = 70.1
 cooling_mode = False
 heating_mode = False
 on_mode = False
@@ -93,10 +93,9 @@ def webpage():
     </style>
     </head>
     <body>
-    <title>Pico W HTTP Server</title>
-    <h1>Pico W HTTP Server</h1>
-    <p class="dotted">This is a Pico W running an HTTP server with CircuitPython.</p>
-    <h1>Control the system with these buttons:</h1>
+    <title>HVAC Enhancer Server</title>
+    <p class="dotted">This project is designed to take care of those stubborn rooms that just won't come up to temperature.</p>
+    <h1>The temperature is currently {measured_temperature} F</h1>
     <form accept-charset="utf-8" method="POST">
       <button class="button" name="FAN ON" value="ON" type="submit">Fan ON</button>
     </form>
@@ -110,7 +109,7 @@ def webpage():
       <button class="button" name="COOLING MODE" value="COOLING" type="submit">Cooling Mode</button>
     </form>
     <form accept-charset="utf-8" method="POST">
-      <label for="goal_temperature">Goal Temperature:</label>
+      <label for="goal_temperature">Goal Temperature (in F):</label>
       <input type="number" id="goal_temperature" name="goal_temperature" min="0" max="100" step="0.1" required>
       <button class="button" type="submit">Set Temperature</button>
     </form>
@@ -233,11 +232,15 @@ while True:
         print(e)
         continue
     if heating_mode == True:
-        if measured_temperature > goal_temperature:
-            set_fan_speed(50)
-    elif cooling_mode == True:
         if measured_temperature < goal_temperature:
             set_fan_speed(50)
+        else:
+            set_fan_speed(0)
+    elif cooling_mode == True:
+        if measured_temperature > goal_temperature:
+            set_fan_speed(50)
+        else:
+            set_fan_speed(0)
     elif on_mode == True:
         set_fan_speed(100)
     elif off_mode == True:
