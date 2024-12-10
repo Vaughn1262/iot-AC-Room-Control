@@ -63,7 +63,7 @@ font_family = "monospace"
 #  this way, can insert string variables from code.py directly
 #  of note, use {{ and }} if something from html *actually* needs to be in brackets
 #  i.e. CSS style formatting
-goal_temperature = 23.0
+goal_temperature = 23
 
 def webpage():
     html = f"""
@@ -123,37 +123,36 @@ def base(request: Request):  # pylint: disable=unused-argument
 #  if a button is pressed on the site
 @server.route("/", POST)
 def buttonpress(request: Request):
-    #  get the raw text
+    global goal_temperature  # Ensure the global goal_temperature is updated
+    global measured_temperature
+    # Get the raw text
     raw_text = request.raw_request.decode("utf8")
     print(raw_text)
-    #  if the led on button was pressed
+
+    # If the LED ON button was pressed
     if "ON" in raw_text:
-        #  turn on the onboard LED
+        # Turn on the onboard LED
         led.value = True
+        set_fan_speed(100)  # Set fan speed to 100%
 
-        # Vaughns changes 
-        set_fan_speed(100)
-
-    #  if the led off button was pressed
+    # If the LED OFF button was pressed
     if "OFF" in raw_text:
-        #  turn the onboard LED off
+        # Turn the onboard LED off
         led.value = False
+        set_fan_speed(0)  # Set fan speed to 0%
 
-        # Vaughns changes
-        set_fan_speed(0)
-        
     # Set Heating Mode
     if "HEATING" in raw_text:
         heating_mode = True
         cooling_mode = False
         print("Heating Mode activated")
-    
+
     # Set Cooling Mode
     if "COOLING" in raw_text:
         cooling_mode = True
         heating_mode = False
         print("Cooling Mode activated")
-    
+
     # Set Goal Temperature (parse the temperature from the form)
     if "goal_temperature" in raw_text:
         goal_temperature_str = raw_text.split('goal_temperature=')[1].split('&')[0]
@@ -162,23 +161,26 @@ def buttonpress(request: Request):
             print(f"Goal Temperature set to {goal_temperature}°C")
         except ValueError:
             print("Invalid temperature value submitted.")
-    if "Reading" in raw_text:
-        read_temperature_str = raw_text.split('Reading:')[1].split('&')[0]
+
+    # Process measured temperature from Temperature Pico
+    if "meas_temperature" in raw_text:
+        meas_temperature_str = raw_text.split('meas_temperature=')[1].split('&')[0]
         try:
-            read_temperature = float(read_temperature_str)
-            print(f"Temp read as {read_temperature}°C")
+            measured_temperature = float(meas_temperature_str)
+            print(f"Measured Temperature received: {measured_temperature}°C")
+            # Optionally, you can use measured_temperature for logging, feedback, or control logic
         except ValueError:
-            print("Invalid temperature value submitted.")
-    
-        
-    #  reload site
+            print("Invalid measured temperature value received.")
+
+    # Reload site
     return Response(request, f"{webpage()}", content_type='text/html')
 
+
 print("starting server..")
-# startup the server
+## startup the server
 try:
     server.start(str(wifi.radio.ipv4_address))
-    print("Listening on http://%s:80" % wifi.radio.ipv4_address)
+    #print("Listening on http://%s:80" % wifi.radio.ipv4_address)
 #  if the server fails to begin, restart the pico w
 except OSError:
     time.sleep(5)
@@ -203,3 +205,4 @@ while True:
     except Exception as e:
         print(e)
         continue
+
