@@ -3,7 +3,7 @@ import pwmio
 import time
 
 # Set up PWM on GPIO 15
-Fan_PWM = pwmio.PWMOut(board.GP10, frequency=2500, duty_cycle=0)
+Fan_PWM = pwmio.PWMOut(board.GP0, frequency=2500, duty_cycle=0)
 temp = 69
 set_temp = 70
 setting = "heating on"
