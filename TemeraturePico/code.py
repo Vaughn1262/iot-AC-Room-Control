@@ -18,25 +18,34 @@ sensor = AHTx0(i2c)
 # Socket pool for communication
 pool = socketpool.SocketPool(wifi.radio)
 server_ip = "192.168.1.42"  # IP address of the server
-server_port = 5001          # Port for temperature data
+server_port = 5000            # Webserver listens on port 80
 
-# Function to send temperature data
+# Function to send temperature data as HTTP POST
 def send_temperature():
     try:
         temperature = sensor.temperature
-        humidity = sensor.relative_humidity
-        message = f"Temperature: {temperature:.2f} C, Humidity: {humidity:.2f} %"
+        meas_temperature = temperature  # Sending current temperature as the "goal_temperature"
+
+        # Format the HTTP POST request
+        payload = f"meas_temperature={meas_temperature:.2f}"
+        request = "POST / HTTP/1.1\r\n" + \
+          "Host: " + server_ip + "\r\n" + \
+          "Content-Type: application/x-www-form-urlencoded\r\n" + \
+          "Content-Length: " + str(len(payload)) + "\r\n" + \
+          "\r\n" + \
+          payload
+
+
+        print(f"Sending data to {server_ip}:{server_port} -> {payload}")
         
-        print(f"Sending data to {server_ip}:{server_port} -> {message}")
-        
-        # Connect to the server
-        sock = pool.socket()  # No AF_INET or SOCK_STREAM needed
+        # Connect to the webserver
+        sock = pool.socket()
         sock.connect((server_ip, server_port))
-        sock.send(message.encode("utf-8"))
-        
-        # Receive acknowledgment
-        response = sock.recv(1024).decode("utf-8").strip()
-        print("Server response:", response)
+        sock.send(request.encode("utf-8"))
+
+        ## Receive acknowledgment
+        #response = sock.recv(1024).decode("utf-8").strip()
+        #print("Server response:", response)
         sock.close()
     except Exception as e:
         print("Error sending temperature data:", e)
@@ -45,4 +54,3 @@ def send_temperature():
 while True:
     send_temperature()
     time.sleep(10)  # Send temperature data every 10 seconds
-
